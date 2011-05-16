@@ -1,6 +1,9 @@
 ;; -*- mode: common-lisp -*-
 (in-package :solr)
 
+(eval-when (compile eval)
+  (setq *readtable* (excl:named-readtable :xml)))
+
 ;; Solr API
 ;;
 ;; Example usage:
