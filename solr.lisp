@@ -196,7 +196,7 @@ the default \"select\" search is used."
              ,@(if sort `((sort . ,sort)))
              ,@param-alist)))
     (multiple-value-bind (body status headers)
-        (do-http-request uri
+        (do-http-request/retry uri
           :method :get :query q :external-format :utf-8)
       (parse-response body status headers))))
 
@@ -204,15 +204,27 @@ the default \"select\" search is used."
 ;;; Some utilities
 ;;;
 
-;;; Common procedure for request-response
+;; Retry if we get EADDRNOTAVAIL - it means we've consumed local ports
+;; faster than the system reclaims it, so it is reasonable to retry
+;; 
+(defun do-http-request/retry (uri &rest keys)
+  (loop
+     (handler-case
+         (return (apply #'do-http-request uri keys))
+       (socket-error (condition)
+         (if* (eq (stream-error-identifier condition) :address-not-available)
+           then (sleep 0.01)
+           else (error condition))))))
+
+;; Common procedure for request-response
 (defun post-request (solr body &optional query-alist)
   (multiple-value-bind (body status headers)
-      (do-http-request (update-endpoint solr query-alist)
+      (do-http-request/retry (update-endpoint solr query-alist)
         :method :post :content body :content-type "text/xml"
         :external-format :utf-8)
     (parse-response body status headers)))
 
-;;; Parse response
+;; Parse response
 (defun parse-response (body status headers)
   (let ((lxml (parse-xml body)))
     (when (not (eql status 200))
