@@ -146,9 +146,9 @@ MAX-SEGMENTS sets the maximum number of segments to optimize down;
 default is 1.
 On success, returns LXML representation of the Solr server response."
   (let ((msg (xml->string
-              ^((commit @waitFlush (xbool wait-flush)
-                        @waitSearcher (xbool wait-searcher)
-                        @maxSegments max-segments)))))
+              ^((optimize @waitFlush (xbool wait-flush)
+                          @waitSearcher (xbool wait-searcher)
+                          @maxSegments max-segments)))))
     (post-request solr msg)))
 
 ;; API
