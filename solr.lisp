@@ -210,7 +210,7 @@ list, whose car is a keyword and whose cdr contains a value.
 "
   (let ((uri (format nil "~a/~a" (solr-uri solr) search-name))
         (q `((q . ,query)
-             (fields . ,fields)
+             (fl . ,fields)
              (score . ,(xbool score))
              ,@(if sort `((sort . ,sort)))
              ,@param-alist)))
