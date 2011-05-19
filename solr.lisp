@@ -86,9 +86,17 @@ If COMMIT is true, the record is committed immediately.
 If OVERWRITE is true, an existing record with the same key field will be
 replaced with DOC, if any.
 
+The value associated with each key can be a string, symbol, boolean,
+real number, date-time, or a nonempty list of them.   Boolean value is
+converted to 'true' or 'false'.  Strings and symbols are passed to Solr
+as strings.  Reals are passed as numbers, and Data-time is converted to
+iso8601 format Solr expects.  If it is a nonempty list, it is passed
+as multiple values with the same key.  (An empty list is treated as a
+boolean false).
+
 Example:
-  (solr-add solr '((id . 1234) (name . \"foo\")
-                   (text . \"Lorem ipsum dolor sit amet, consectetur
+  (solr-add solr '((:id . 1234) (:name . \"foo\")
+                   (:text . \"Lorem ipsum dolor sit amet, consectetur
    adipisicing elit, sed do eiusmod tempor incididunt ut labore et
    dolore magna aliqua.\"))
                  :commit t)
@@ -182,13 +190,24 @@ On success, returns LXML representation of the Solr server response."
                                         (search-name "select")
                                         (score t)
                                         (sort nil)
-                                        (param-alist nil))
+                                        (param-alist nil)
+                                        (result-type :whole))
   "Searches documents according to the given QUERY.
 Returns LXML representation of the Solr server response.
 FIELDS specifies which fields to be included in the results; the default
 is \"*\".
+
 SEARCH-NAME names the name of the customized search; if omitted,
-the default \"select\" search is used."
+the default \"select\" search is used.
+
+RESULT-TYPE specifies how the query result is returned.  It can be either
+one of :whole, :nodes, or :alist.
+If it is :whole, the entire response message in LXML representation is
+returned.
+If it is :nodes, a list of 'doc' nodes in LXML is returned.
+If it is :alist, the 'doc' nodes in the result is converted to an assoc
+list, whose car is a keyword and whose cdr contains a value.
+"
   (let ((uri (format nil "~a/~a" (solr-uri solr) search-name))
         (q `((q . ,query)
              (fields . ,fields)
@@ -198,7 +217,49 @@ the default \"select\" search is used."
     (multiple-value-bind (body status headers)
         (do-http-request/retry uri
           :method :get :query q :external-format :utf-8)
-      (parse-response body status headers))))
+      (translate-result
+       (parse-response body status headers)
+       result-type))))
+
+(defun translate-result (lxml type)
+  (ecase type
+    ((:whole) lxml)
+    ((:nodes) (extract-doc-nodes lxml))
+    ((:alist) (mapcar #'doc-node->alist (extract-doc-nodes lxml)))))
+
+;; This woulb be a one-liner if we could use XPath, but I [SK] don't
+;; want to depend on CL-XML just for that.
+(defun extract-doc-nodes (lxml)
+  (labels ((search-result (lxml)
+             (cond ((not (consp lxml)) nil)
+                   ((and (consp lxml) (consp (car lxml))
+                         (eq (caar lxml) 'result)
+                         (equal (cadr (member 'name (cdar lxml))) "response"))
+                    (cdr lxml))             ;found
+                   (t (dolist (node (cdr lxml))
+                        (let ((r (search-result node)))
+                          (when r (return-from extract-doc-nodes r))))))))
+    (search-result lxml)))
+
+(defun doc-node->alist (node)
+  (labels ((get-name (n)
+             (intern (cadr (member 'name (cdar n))) :keyword))
+           (get-value (n)
+             (print n)
+             (let ((type (if (consp (car n)) (caar n) (car n)))
+                   (vals (cdr n)))
+               (ecase type
+                 ((str)     (car vals))
+                 ((arr lis) (mapcar #'get-value vals))
+                 ((int)     (parse-integer (car vals)))
+                 ((float)   (let ((v (read-from-string (car vals))))
+                              (unless (realp v)
+                                (error "Invalid float number:" (car vals)))
+                              v))
+                 ((bool)    (not (equal (car vals) "false")))
+                 ((date)    (parse-iso8601 (car vals)))))))
+    (mapcar (lambda (n) (cons (get-name n) (get-value n))) (cdr node))))
+
 
 ;;;
 ;;; Some utilities
@@ -250,13 +311,14 @@ the default \"select\" search is used."
     else (loop for (key . val) in rec do (render-field key val))))
 
 (defun render-field (key val)
-  (if* (listp val)
+  (if* (consp val)
     then (dolist (v val) (render-field key v))
     else ^((field @name key) @(render-value val))))
 
 (defun render-value (val)
   (etypecase val
     (number val)
+    (boolean (xbool val))
     (string val)
     (symbol val)
     (date-time
