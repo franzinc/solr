@@ -245,7 +245,6 @@ list, whose car is a keyword and whose cdr contains a value.
   (labels ((get-name (n)
              (intern (cadr (member 'name (cdar n))) :keyword))
            (get-value (n)
-             (print n)
              (let ((type (if (consp (car n)) (caar n) (car n)))
                    (vals (cdr n)))
                (ecase type
