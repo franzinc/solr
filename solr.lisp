@@ -213,7 +213,12 @@ list, whose car is a keyword and whose cdr contains a value.
              (fl . ,fields)
              (score . ,(xbool score))
              ,@(if sort `((sort . ,sort)))
-             ,@param-alist)))
+             ,@(loop for (k . v) in param-alist
+                  if (consp v)
+                    append (mapcar (lambda (vv) (cons k (render-value vv))) v)
+                  else
+                    collect (cons k (render-value v))
+                  end))))
     (multiple-value-bind (body status headers)
         (do-http-request/retry uri
           :method :get :query q :external-format :utf-8)
