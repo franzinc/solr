@@ -193,12 +193,35 @@ On success, returns LXML representation of the Solr server response."
                                         (param-alist nil)
                                         (result-type :whole))
   "Searches documents according to the given QUERY.
-Returns LXML representation of the Solr server response.
-FIELDS specifies which fields to be included in the results; the default
-is \"*\".
+Returns Solr response in LXML or alist of the result, depending on
+the :RESULT-TYPE argument; see below.
+If Solr server returns an error, solr-error condition is raised.
+
+FIELDS specifies which fields to be included in the results; 
+the default is \"*\".  You can list multiple fields separated
+by comma, e.g. \"id,name\".
 
 SEARCH-NAME names the name of the customized search; if omitted,
 the default \"select\" search is used.
+
+SORT takes Solr sort specification in a string, e.g. \"name asc\"
+to sort by ascending name order, or \"inStock asc, price desc\"
+for combined sort.
+
+PARAM-ALIST can be used for passing additional query commands
+and parameters.  For example,  the following enables faceted search
+with \"cat\" and \"inStock\" categories:
+
+  :param-alist '((:facet . t) (:facet.field \"cat\" \"inStock\"))
+
+Or, the following enables highlighting for the field \"name\" and
+\"features\".
+
+  :param-alist '((:hl . t) (:hl.fl . \"name,features\"))
+
+Results for those features are returned by additional nodes in
+the LXML.  To obtain them, you have to get the whole LXML result
+with :result-type :whole, and extract the appropriate nodes.
 
 RESULT-TYPE specifies how the query result is returned.  It can be either
 one of :whole, :nodes, or :alist.
@@ -263,7 +286,6 @@ list, whose car is a keyword and whose cdr contains a value.
                  ((bool)    (not (equal (car vals) "false")))
                  ((date)    (parse-iso8601 (car vals)))))))
     (mapcar (lambda (n) (cons (get-name n) (get-value n))) (cdr node))))
-
 
 ;;;
 ;;; Some utilities
