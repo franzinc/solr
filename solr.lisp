@@ -261,8 +261,8 @@ list, whose car is a keyword and whose cdr contains a value.
   (labels ((search-result (lxml)
              (cond ((not (consp lxml)) nil)
                    ((and (consp lxml) (consp (car lxml))
-                         (eq (caar lxml) 'result)
-                         (equal (cadr (member 'name (cdar lxml))) "response"))
+                         (eq (caar lxml) :result)
+                         (equal (cadr (member :name (cdar lxml))) "response"))
                     (cdr lxml))             ;found
                    (t (dolist (node (cdr lxml))
                         (let ((r (search-result node)))
@@ -271,20 +271,20 @@ list, whose car is a keyword and whose cdr contains a value.
 
 (defun doc-node->alist (node)
   (labels ((get-name (n)
-             (intern (cadr (member 'name (cdar n))) :keyword))
+             (intern (cadr (member :name (cdar n))) :keyword))
            (get-value (n)
              (let ((type (if (consp (car n)) (caar n) (car n)))
                    (vals (cdr n)))
                (ecase type
-                 ((str)     (car vals))
-                 ((arr lis) (mapcar #'get-value vals))
-                 ((int)     (parse-integer (car vals)))
-                 ((float)   (let ((v (read-from-string (car vals))))
-                              (unless (realp v)
-                                (error "Invalid float number:" (car vals)))
-                              v))
-                 ((bool)    (not (equal (car vals) "false")))
-                 ((date)    (parse-iso8601 (car vals)))))))
+                 ((:str)      (car vals))
+                 ((:arr :lis) (mapcar #'get-value vals))
+                 ((:int)      (parse-integer (car vals)))
+                 ((:float)    (let ((v (read-from-string (car vals))))
+                                (unless (realp v)
+                                  (error "Invalid float number:" (car vals)))
+                                v))
+                 ((:bool)     (not (equal (car vals) "false")))
+                 ((:date)     (parse-iso8601 (car vals)))))))
     (mapcar (lambda (n) (cons (get-name n) (get-value n))) (cdr node))))
 
 ;;;
@@ -313,7 +313,7 @@ list, whose car is a keyword and whose cdr contains a value.
 
 ;; Parse response
 (defun parse-response (body status headers)
-  (let ((lxml (parse-xml body)))
+  (let ((lxml (let ((*package* (find-package :keyword))) (parse-xml body))))
     (when (not (eql status 200))
       (error 'solr-error :status-code status :response-headers headers
              :response-body lxml))
@@ -346,7 +346,7 @@ list, whose car is a keyword and whose cdr contains a value.
     (number val)
     (boolean (xbool val))
     (string val)
-    (symbol val)
+    (symbol (symbol-name val))
     (date-time
      (with-output-to-string (s)
        (let ((*date-time-fmt* "%Y-%m-%dT%H:%M:%SZ"))
