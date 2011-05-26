@@ -6,7 +6,7 @@
 (require :datetime)
 (require :net-xml-generator)
 
-(asdf:defsystem solr
+(asdf:defsystem :solr
   :name "Solr"
   :author "Shiro Kawai"
   :version "0.1"
