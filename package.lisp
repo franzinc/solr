@@ -14,4 +14,6 @@
            :solr-rollback
            :solr-delete
            :solr-query
+           :solr-result->doc-nodes
+           :solr-result->doc-alist
            ))

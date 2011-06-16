@@ -191,10 +191,10 @@ On success, returns LXML representation of the Solr server response."
                                         (score t)
                                         (sort nil)
                                         (param-alist nil)
-                                        (result-type :whole))
+                                        (result-type :whole) ;for backward comaptibility
+                       )
   "Searches documents according to the given QUERY.
-Returns Solr response in LXML or alist of the result, depending on
-the :RESULT-TYPE argument; see below.
+Returns Solr response in LXML.
 If Solr server returns an error, solr-error condition is raised.
 
 FIELDS specifies which fields to be included in the results; 
@@ -219,17 +219,18 @@ Or, the following enables highlighting for the field \"name\" and
 
   :param-alist '((:hl . t) (:hl.fl . \"name,features\"))
 
-Results for those features are returned by additional nodes in
-the LXML.  To obtain them, you have to get the whole LXML result
-with :result-type :whole, and extract the appropriate nodes.
+By default, Solr returns the first 10 results.  You can see the
+total number of results by :numFound attribute of the :result LXML node.
+To retrieve subsequent results, you need to pass :start parameter
+as follows:
 
-RESULT-TYPE specifies how the query result is returned.  It can be either
-one of :whole, :nodes, or :alist.
-If it is :whole, the entire response message in LXML representation is
-returned.
-If it is :nodes, a list of 'doc' nodes in LXML is returned.
-If it is :alist, the 'doc' nodes in the result is converted to an assoc
-list, whose car is a keyword and whose cdr contains a value.
+  :param-alist '((:start . 10))
+
+This will return 11th to 20th results (or less if the result is exhausted).
+Alternatively, you can increase the number of results returned by one
+query by :rows parameter:
+
+  :param-alist '((:rows . 1000))
 "
   (let ((uri (format nil "~a/~a" (solr-uri solr) search-name))
         (q `((q . ,query)
@@ -252,8 +253,8 @@ list, whose car is a keyword and whose cdr contains a value.
 (defun translate-result (lxml type)
   (ecase type
     ((:whole) lxml)
-    ((:nodes) (extract-doc-nodes lxml))
-    ((:alist) (mapcar #'doc-node->alist (extract-doc-nodes lxml)))))
+    ((:nodes) (solr-result->doc-nodes lxml))
+    ((:alist) (solr-result->doc-alist lxml))))
 
 ;; This woulb be a one-liner if we could use XPath, but I [SK] don't
 ;; want to depend on CL-XML just for that.
@@ -286,6 +287,34 @@ list, whose car is a keyword and whose cdr contains a value.
                  ((:bool)     (not (equal (car vals) "false")))
                  ((:date)     (parse-iso8601 (car vals)))))))
     (mapcar (lambda (n) (cons (get-name n) (get-value n))) (cdr node))))
+
+;;
+;; Result extractors
+;;
+
+;; NB: Those procedures can be one-liners if we use XPath.  I just avoided
+;; to depend on CL-XML at the moment, for dragging it might be too much
+;; for some app.  I may change my mind later, though.
+
+;; API
+(defun solr-result->doc-nodes (lxml)
+  "Given LXML result of solr-query response, extract and returns a list of :doc elements in LXML format."
+  (labels ((search-result (lxml)
+             (cond ((not (consp lxml)) nil)
+                   ((and (consp lxml) (consp (car lxml))
+                         (eq (caar lxml) :result)
+                         (equal (cadr (member :name (cdar lxml))) "response"))
+                    (cdr lxml))             ;found
+                   (t (dolist (node (cdr lxml))
+                        (let ((r (search-result node)))
+                          (when r (return-from solr-result->doc-nodes r))))))))
+    (search-result lxml)))
+
+;; API
+(defun solr-result->doc-alist (lxml)
+  "Given LXML result of solr-query response, extract and returns a list of :doc elements in alist format.
+ Values in the nodes are converted back to CL objects."
+  (mapcar #'doc-node->alist (solr-result->doc-nodes lxml)))
 
 ;;;
 ;;; Some utilities
