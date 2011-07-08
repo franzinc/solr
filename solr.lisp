@@ -10,7 +10,7 @@
 ;;
 ;;   (defvar *solr* (make-instance 'solr :uri "http://localhost:8983/solr"))
 ;;
-;;   (solr-add *solr* '((id . 123) (name . "foobar") (author . "xyzzy")))
+;;   (solr-add *solr* '((:id . 123) (:name . "foobar") (:author . "xyzzy")))
 ;;
 ;;   (solr-commit *solr*)
 ;;
@@ -41,8 +41,7 @@
 ;;     Numbers are mapped to Lisp numbers.
 ;;     Datetime is mapped to date-time class.
 ;;     Text is mapped to Lisp strings.
-;;     Boolean value is mapped to Lisp keyword :true and :false
-;;      (We avoid using nil, for it is indistinguishable from empty set).
+;;     Boolean value is mapped to Lisp nil and t.
 
 ;;;
 ;;; Connection representation and condition
@@ -148,7 +147,7 @@ On success, returns LXML representation of the Solr server response."
   "Send OPTIMIZE command.
 WAIT-FLUSH controls whether the request waits after the data is written
 to the disk; default is T.
-WAIT-SEARCHER controls whether the request watis until searcher objects
+WAIT-SEARCHER controls whether the request waits until searcher objects
 to be warmed for use; default is T.
 MAX-SEGMENTS sets the maximum number of segments to optimize down;
 default is 1.
