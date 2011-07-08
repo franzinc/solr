@@ -258,16 +258,16 @@ query by :rows parameter:
 
 ;; This woulb be a one-liner if we could use XPath, but I [SK] don't
 ;; want to depend on CL-XML just for that.
-(defun extract-doc-nodes (lxml)
+(defun extract-response-node (lxml)
   (labels ((search-result (lxml)
              (cond ((not (consp lxml)) nil)
                    ((and (consp lxml) (consp (car lxml))
                          (eq (caar lxml) :result)
                          (equal (cadr (member :name (cdar lxml))) "response"))
-                    (cdr lxml))             ;found
+                    lxml)               ;found
                    (t (dolist (node (cdr lxml))
                         (let ((r (search-result node)))
-                          (when r (return-from extract-doc-nodes r))))))))
+                          (when r (return-from extract-response-node r))))))))
     (search-result lxml)))
 
 (defun doc-node->alist (node)
@@ -292,27 +292,23 @@ query by :rows parameter:
 ;; Result extractors
 ;;
 
-;; NB: Those procedures can be one-liners if we use XPath.  I just avoided
-;; to depend on CL-XML at the moment, for dragging it might be too much
-;; for some app.  I may change my mind later, though.
+;; API
+(defun solr-result->response-count (lxml)
+  "From the LXML result of solr-query response, extract and returns three values: total number of hits, the start record number of the current response, and the number of records in this response."
+  (let ((node (extract-response-node lxml)))
+    (and node
+         (values (parse-integer (getf (cdar node) :numFound))
+                 (parse-integer (getf (cdar node) :start))
+                 (length (cdr node))))))
 
 ;; API
 (defun solr-result->doc-nodes (lxml)
-  "Given LXML result of solr-query response, extract and returns a list of :doc elements in LXML format."
-  (labels ((search-result (lxml)
-             (cond ((not (consp lxml)) nil)
-                   ((and (consp lxml) (consp (car lxml))
-                         (eq (caar lxml) :result)
-                         (equal (cadr (member :name (cdar lxml))) "response"))
-                    (cdr lxml))             ;found
-                   (t (dolist (node (cdr lxml))
-                        (let ((r (search-result node)))
-                          (when r (return-from solr-result->doc-nodes r))))))))
-    (search-result lxml)))
+  "From the LXML result of solr-query response, extract and returns a list of :doc elements in LXML format."
+  (cdr (extract-response-node lxml)))
 
 ;; API
 (defun solr-result->doc-alist (lxml)
-  "Given LXML result of solr-query response, extract and returns a list of :doc elements in alist format.
+  "From the LXML result of solr-query response, extract and returns a list of :doc elements in alist format.
  Values in the nodes are converted back to CL objects."
   (mapcar #'doc-node->alist (solr-result->doc-nodes lxml)))
 
