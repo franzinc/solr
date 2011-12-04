@@ -1,4 +1,10 @@
 ;; -*- mode: common-lisp -*-
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require :aserve)
+  (require :datetime)
+  (require :net-xml-generator))
+
 (defpackage :solr
   (:use :cl :excl
         :util.date-time
