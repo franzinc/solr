@@ -69,8 +69,9 @@
 (defmacro xml->string (&body body)
   (let ((s (gensym)))
     `(with-output-to-string (,s)
-       (with-xml-generation (,s)
-         ,@body))))
+       (let ((*print-pretty* nil))
+         (with-xml-generation (,s)
+           ,@body)))))
 
 ;;;
 ;;; Updating
