@@ -1,5 +1,5 @@
 ;; -*- mode: common-lisp -*-
-;; copyright (c) 2011-2012 Franz Inc, Oakland, CA - All rights reserved.
+;; copyright (c) 2011-2013 Franz Inc, Oakland, CA - All rights reserved.
 ;;
 ;; The software, data and information contained herein are proprietary
 ;; to, and comprise valuable trade secrets of, Franz, Inc.  They are
