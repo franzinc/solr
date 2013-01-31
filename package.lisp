@@ -1,4 +1,9 @@
 ;; -*- mode: common-lisp -*-
+;; copyright (c) 2011-2013 Franz Inc, Oakland, CA - All rights reserved.
+;; This program and the accompanying materialsare made available under the
+;; terms of the Eclipse Public License v1.0 which accompanies this
+;; distribution (see license.txt), and is available at
+;;   http://www.eclipse.org/legal/epl-v10.html
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :aserve)
