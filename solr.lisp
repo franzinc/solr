@@ -345,11 +345,16 @@ query by :rows parameter:
 
 ;; Parse response
 (defun parse-response (body status headers)
-  (let ((lxml (let ((*package* (find-package :keyword))) (parse-xml body))))
-    (when (not (eql status 200))
-      (error 'solr-error :status-code status :response-headers headers
-             :response-body lxml))
-    lxml))
+  (destructuring-bind ((param content-type &optional charset))
+      (net.aserve::parse-header-value (cdr (assoc :content-type headers)))
+    (declare (ignore param charset))
+    (let ((lxml (if* (string-equal content-type "application/xml")
+		   then (let ((*package* (find-package :keyword))) (parse-xml body))
+		   else body)))
+      (when (not (eql status 200))
+	(error 'solr-error :status-code status :response-headers headers
+	       :response-body lxml))
+      lxml)))
 
 ;; Some Solr POST message can take optional parameters via url query string.
 ;; We can't use :query argument of do-http-request, for we have to use
