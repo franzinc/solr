@@ -286,7 +286,7 @@ query by :rows parameter:
                (ecase type
                  ((:str)      (car vals))
                  ((:arr :lis) (mapcar #'get-value vals))
-                 ((:int)      (parse-integer (car vals)))
+                 ((:int :long) (parse-integer (car vals)))
                  ((:float)    (let ((v (read-from-string (car vals))))
                                 (unless (realp v)
                                   (error "Invalid float number:" (car vals)))
