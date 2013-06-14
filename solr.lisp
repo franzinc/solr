@@ -251,7 +251,8 @@ query by :rows parameter:
                   end))))
     (multiple-value-bind (body status headers)
         (do-http-request/retry uri
-          :method :get :query q :external-format :utf-8)
+          :method :get :query q :external-format #+allegro (crlf-base-ef :utf-8)
+	  #-allegro :utf-8)
       (translate-result
        (parse-response body status headers)
        result-type))))
@@ -339,7 +340,7 @@ query by :rows parameter:
   (multiple-value-bind (body status headers)
       (do-http-request/retry (update-endpoint solr query-alist)
         :method :post :content body :content-type "text/xml"
-        :external-format :utf-8)
+        :external-format #+allegro (crlf-base-ef :utf-8) #-allegro :utf-8)
     (parse-response body status headers)))
 
 ;; Parse response
@@ -357,7 +358,10 @@ query by :rows parameter:
 (defun update-endpoint (solr &optional query-params)
   (let ((uri (solr-uri solr)))
     (if query-params
-        (format nil "~a/update?~a" uri (net.aserve:query-to-form-urlencoded query-params :external-format :utf-8))
+        (format nil "~a/update?~a" uri
+		(net.aserve:query-to-form-urlencoded query-params :external-format
+						     #+allegro (crlf-base-ef :utf-8)
+						     #-allegro :utf-8))
         (format nil "~a/update" uri))))
 
 ;; Rendering record to xml.  Needs to be called within the dynamic
