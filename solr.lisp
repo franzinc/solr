@@ -130,8 +130,7 @@ On success, returns LXML representation of the Solr server response."
     (post-request solr msg `((commit . ,(xbool commit))))))
 
 ;; API
-(defmethod solr-commit ((solr solr) &key (wait-flush t)
-                                         (wait-searcher t)
+(defmethod solr-commit ((solr solr) &key (wait-searcher t)
                                          (expunge-deletes nil))
   "Send COMMIT command.
 WAIT-FLUSH controls whether the request waits after the data is written
@@ -142,8 +141,7 @@ EXPUNGE-DELETS controls whether sergments with deletes are merged away;
 default is NIL.
 On success, returns LXML representation of the Solr server response."
   (let ((msg (xml->string
-              ^((commit @waitFlush (xbool wait-flush)
-                        @waitSearcher (xbool wait-searcher)
+              ^((commit @waitSearcher (xbool wait-searcher)
                         @expungeDeletes (xbool expunge-deletes))))))
     (post-request solr msg)))
 
