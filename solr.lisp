@@ -279,10 +279,14 @@ query by :rows parameter:
                  ((:str)      (car vals))
                  ((:arr :lis) (mapcar #'get-value vals))
                  ((:int :long) (parse-integer (car vals)))
-                 ((:float)    (let ((v (read-from-string (car vals))))
-                                (unless (realp v)
-                                  (error "Invalid float number:" (car vals)))
-                                v))
+                 ((:float :double)
+		  (let* ((*read-default-float-format* (if (eq type :float)
+							  'single-float
+							'double-float))
+			 (v (read-from-string (car vals))))
+		    (unless (realp v)
+		      (error "Invalid ~a number:" type (car vals)))
+		    v))
                  ((:bool)     (not (equal (car vals) "false")))
                  ((:date)     (parse-iso8601 (car vals)))))))
     (mapcar (lambda (n) (cons (get-name n) (get-value n))) (cdr node))))
@@ -369,12 +373,17 @@ query by :rows parameter:
     else (loop for (key . val) in rec do (render-field key val))))
 
 (defun render-field (key val)
-  (if* (consp val)
-    then (dolist (v val) (render-field key v))
-    else ^((field @name key) @(render-value val))))
+  (cond
+   ((consp key) ^(doc (render-record (cons key val))))
+   ((consp val) (dolist (v val) (render-field key v)))
+   ((hash-table-p val) ^(doc (render-record val)))
+   (t ^((field @name key) @(render-value val)))))
 
 (defun render-value (val)
   (etypecase val
+    ;; emit double-floats with an #\E for exponentChar instead of #\D so solr can parse them
+    (double-float (let ((*read-default-float-format* 'double-float))
+		    (format nil "~e" val)))
     (number val)
     (boolean (xbool val))
     (string val)
