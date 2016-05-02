@@ -71,6 +71,24 @@
    (response-headers :initarg :response-headers)
    (response-body    :initarg :response-body)))
 
+(defmethod print-object ((o solr-error) stream)
+  (print-unreadable-object (o stream :type t)
+    (let ((code (and (slot-boundp o 'status-code)
+		     (slot-value o 'status-code)))
+	  (body (and (slot-boundp o 'response-body)
+		     (slot-value o 'response-body)))
+	  (headers (and (slot-boundp o 'response-headers)
+			(slot-value o 'response-headers)))
+	  (length-cutoff 40))
+      (format stream "code: ~a, ~:d header~:p, response: ~a"
+	      code
+	      (length headers)
+	      (if (and body (stringp body))
+		  (if (> (length body) length-cutoff)
+		      (format nil "\"(starts with) ~a...\"" (subseq body 0 length-cutoff))
+		    body)
+		body)))))
+
 ;; a utility macro
 (defmacro xml->string (&body body)
   (let ((s (gensym)))
