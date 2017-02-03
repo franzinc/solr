@@ -11,15 +11,7 @@
                (:file "solr" :depends-on ("package")))
 
   :in-order-to ((test-op (test-op :solr.test))))
-
   
-(asdf:defsystem :solr.test
-  :name "Unit test for Solr"
-  :author "Shiro Kawai / Franz Inc."
-  :version "0.1"
-  :components ((:file "test"))
-  :depends-on (:solr))
-
 (defmethod asdf:perform ((op asdf:test-op)
                          (system (eql (asdf:find-system :solr))))
   (asdf:load-system :solr.test)
