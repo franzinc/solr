@@ -15,5 +15,4 @@
 (defmethod asdf:perform ((op asdf:test-op)
                          (system (eql (asdf:find-system :solr))))
   (asdf:load-system :solr.test)
-  (let ((run-test (intern '#:run-test :solr.test)))
-    (funcall run-test)))
+  (funcall (find-symbol (symbol-name '#:run-test) :solr.test)))
