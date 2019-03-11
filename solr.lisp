@@ -363,7 +363,12 @@ query by :rows parameter:
       (net.aserve::parse-header-value (cdr (assoc :content-type headers)))
     (declare (ignore param charset))
     (let ((lxml (if* (string-equal content-type "application/xml")
-		   then (let ((*package* (find-package :keyword))) (parse-xml body))
+		   then (let ((*package* (find-package :keyword))) 
+                          ;; the pxml parser returns ((:xml..) (:response ..))
+                          ;; but pxml-sax returns ((:response ..)) 
+                          ;; by prepending :xml the extract-response-node
+                          ;; function will accept the new or old parsed form
+                          (cons :xml (parse-xml body)))
 		   else body)))
       (when (not (eql status 200))
 	(error 'solr-error :status-code status :response-headers headers

@@ -8,7 +8,9 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :aserve)
   (require :datetime)
-  (require :net-xml-generator))
+  (require :net-xml-generator)
+  (require :pxml-sax)
+  )
 
 (defpackage :solr
   (:use :cl :excl
